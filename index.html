@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>働き方のブロックタイプ診断</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    min-height: 100%;
+    font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+    background: #fafaf8;
+    color: #1a1a1a;
+  }
+
+  /* ── レイアウト ── */
+  .page {
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem 1.25rem;
+  }
+  .card {
+    width: 100%;
+    max-width: 480px;
+  }
+
+  /* ── イントロ ── */
+  .intro {
+    text-align: center;
+  }
+  .intro-label {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    color: #888;
+    margin-bottom: 16px;
+  }
+  .intro-sub {
+    font-size: 14px;
+    font-weight: 600;
+    color: #534AB7;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+  .intro-title {
+    font-size: clamp(28px, 8vw, 38px);
+    font-weight: 700;
+    line-height: 1.2;
+    color: #1a1a1a;
+    margin-bottom: 24px;
+  }
+  .intro-desc {
+    font-size: 15px;
+    color: #555;
+    line-height: 1.85;
+    margin-bottom: 32px;
+  }
+  .intro-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 36px;
+  }
+  .tag {
+    padding: 7px 16px;
+    background: #fff;
+    border: 1px solid #e0dff8;
+    border-radius: 100px;
+    font-size: 13px;
+    color: #666;
+  }
+  .start-btn {
+    display: block;
+    width: 100%;
+    padding: 18px;
+    background: #534AB7;
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .start-btn:active { transform: scale(0.98); background: #3C3489; }
+
+  /* ── クイズ ── */
+  .quiz { display: none; }
+  .progress-wrap { margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .step-label { font-size: 13px; color: #888; }
+  .progress-bar { height: 5px; background: #e8e6f8; border-radius: 4px; margin-bottom: 28px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #534AB7; border-radius: 4px; transition: width 0.4s ease; }
+  .question { font-size: 18px; font-weight: 600; line-height: 1.55; margin-bottom: 20px; color: #1a1a1a; }
+  .options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+  .opt-btn {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 16px 14px;
+    background: #fff;
+    border: 1.5px solid #e8e6f8;
+    border-radius: 14px;
+    cursor: pointer; text-align: left;
+    font-size: 15px; color: #333;
+    line-height: 1.5;
+    transition: border-color 0.15s, background 0.15s;
+    width: 100%;
+    font-family: inherit;
+  }
+  .opt-btn:hover { border-color: #534AB7; background: #f0effe; }
+  .opt-btn.selected { border-color: #534AB7; background: #EEEDFE; color: #3C3489; font-weight: 600; }
+  .opt-letter {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    background: #f0effe; border: 1.5px solid #d0cdf5;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: #888;
+    transition: background 0.15s, color 0.15s;
+  }
+  .opt-btn.selected .opt-letter { background: #534AB7; color: #fff; border-color: #534AB7; }
+  .opt-text { padding-top: 3px; }
+  .nav { display: flex; gap: 10px; }
+  .btn-back {
+    padding: 14px 20px; background: transparent; color: #888;
+    border: 1.5px solid #e0dff8; border-radius: 12px;
+    font-size: 15px; cursor: pointer; font-family: inherit;
+    transition: background 0.15s;
+  }
+  .btn-next {
+    flex: 1; padding: 16px; background: #534AB7; color: #fff;
+    border: none; border-radius: 12px;
+    font-size: 16px; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: background 0.2s, transform 0.1s;
+  }
+  .btn-next:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-next:not(:disabled):active { transform: scale(0.98); background: #3C3489; }
+
+  /* ── 結果 ── */
+  .result { display: none; }
+  .result-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 16px; border-radius: 100px;
+    font-size: 13px; font-weight: 600; margin-bottom: 14px;
+  }
+  .result-title { font-size: 20px; font-weight: 700; line-height: 1.45; margin-bottom: 12px; color: #1a1a1a; }
+  .result-desc { font-size: 15px; color: #555; line-height: 1.8; margin-bottom: 20px; }
+  .block-box { padding: 16px; border-left: 3px solid; border-radius: 0 10px 10px 0; margin-bottom: 16px; }
+  .block-label { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .block-text { font-size: 14px; line-height: 1.7; }
+  .point-box { background: #fff; border: 1.5px solid #e8e6f8; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+  .point-label { font-size: 12px; color: #888; margin-bottom: 5px; letter-spacing: 0.04em; }
+  .point-text { font-size: 15px; font-weight: 600; color: #1a1a1a; line-height: 1.5; }
+  .cta-box { background: #EEEDFE; border-radius: 16px; padding: 20px; }
+  .cta-title { font-size: 16px; font-weight: 700; color: #3C3489; margin-bottom: 8px; line-height: 1.45; }
+  .cta-text { font-size: 14px; color: #534AB7; line-height: 1.75; margin-bottom: 18px; }
+  .cta-btn {
+    display: block; width: 100%; padding: 17px;
+    background: #534AB7; color: #fff; border: none;
+    border-radius: 12px; font-size: 16px; font-weight: 600;
+    cursor: pointer; text-align: center; font-family: inherit;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .cta-btn:active { transform: scale(0.98); background: #3C3489; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="card">
+
+    <!-- イントロ -->
+    <div class="intro" id="screen-intro">
+      <div class="intro-label">＼ LINE限定 ／</div>
+      <div class="intro-sub">働き方の</div>
+      <div class="intro-title">ブロックタイプ診断</div>
+      <div class="intro-desc">
+        あなたが行動できない原因は、<br>
+        無意識の「ブロック」にあるかもしれません。<br>
+        10の質問で、あなたのブロックタイプを診断します。
+      </div>
+      <div class="intro-tags">
+        <span class="tag">⏱ 約2分</span>
+        <span class="tag">📋 全10問</span>
+        <span class="tag">🔒 無料</span>
+      </div>
+      <button class="start-btn" onclick="startDiagnosis()">診断をはじめる →</button>
+    </div>
+
+    <!-- クイズ -->
+    <div class="quiz" id="screen-quiz">
+      <div class="progress-wrap">
+        <span class="step-label" id="step-label">質問 1 / 10</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:10%"></div></div>
+      <div class="question" id="question-text"></div>
+      <div class="options" id="options-list"></div>
+      <div class="nav">
+        <button class="btn-back" id="btn-back" onclick="goBack()" style="display:none;">← 戻る</button>
+        <button class="btn-next" id="btn-next" onclick="goNext()" disabled>次へ →</button>
+      </div>
+    </div>
+
+    <!-- 結果 -->
+    <div class="result" id="screen-result">
+      <div id="result-card"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const questions = [
+  { text: "新しいことに挑戦しようとすると、まず最初に頭に浮かぶのは？", options: [{ text: "うまくいかなかったら恥ずかしい", score: { A: 2 } },{ text: "周りの人にどう思われるか気になる", score: { B: 2 } },{ text: "失敗したら元に戻れない気がする", score: { C: 2 } },{ text: "そもそも自分にはできない気がする", score: { D: 2 } }] },
+  { text: "「副業や在宅ワークを始めたい」と思ったとき、どんな「でも」が出てきますか？", options: [{ text: "でも、失敗したら時間とお金が無駄になる", score: { A: 2 } },{ text: "でも、知り合いに変な目で見られそう", score: { B: 2 } },{ text: "でも、今の安定を手放すのが怖い", score: { C: 2 } },{ text: "でも、私には何もスキルがない", score: { D: 2 } }] },
+  { text: "行動しようとして止まるとき、どんな感覚に近い？", options: [{ text: "「失敗したら終わり」という恐怖感", score: { A: 2 } },{ text: "「笑われたらどうしよう」という不安感", score: { B: 2 } },{ text: "「まだ準備ができていない」という焦り", score: { C: 2 } },{ text: "「どうせ私には無理」という諦め", score: { D: 2 } }] },
+  { text: "誰かが副業で成功したという話を聞いたとき、正直どう感じる？", options: [{ text: "いいなと思うけど、自分がやったら失敗しそうと感じる", score: { A: 2 } },{ text: "すごいと思うけど、目立つことへの抵抗感がある", score: { B: 2 } },{ text: "憧れるけど、今の環境を変えるのが怖い", score: { C: 2 } },{ text: "あの人だからできたんだと思ってしまう", score: { D: 2 } }] },
+  { text: "「やってみよう」と決意した後、行動が止まるパターンは？", options: [{ text: "完璧にできないと思うと始められない", score: { A: 2 } },{ text: "誰かに報告したり見せたりする場面が怖い", score: { B: 2 } },{ text: "準備を整えすぎて、肝心の一歩が出ない", score: { C: 2 } },{ text: "どうせうまくいかないと思ってやめてしまう", score: { D: 2 } }] },
+  { text: "自分の「好きなこと」や「得意なこと」を仕事にすることを考えると？", options: [{ text: "稼げなかったら恥ずかしいと思う", score: { A: 2 } },{ text: "人に「何やってるの？」と思われそうで怖い", score: { B: 2 } },{ text: "趣味が仕事になったら楽しめなくなりそうで不安", score: { C: 2 } },{ text: "そんなことで稼げると思えない", score: { D: 2 } }] },
+  { text: "過去に行動できなかった経験を振り返ると、一番の原因は何だったと思う？", options: [{ text: "失敗への恐怖が大きかった", score: { A: 2 } },{ text: "人の目や評価が気になっていた", score: { B: 2 } },{ text: "リスクや不安定さが気になっていた", score: { C: 2 } },{ text: "自分の能力に自信が持てなかった", score: { D: 2 } }] },
+  { text: "理想の働き方を想像したとき、どんな気持ちになる？", options: [{ text: "ワクワクするけど、「現実は甘くない」と冷めてしまう", score: { A: 1, D: 1 } },{ text: "良さそうだけど、みんなと違う生き方への罪悪感がある", score: { B: 2 } },{ text: "憧れるけど、何かを失いそうで踏み出せない", score: { C: 2 } },{ text: "素敵だけど、自分にはたどり着けない遠い話に感じる", score: { D: 2 } }] },
+  { text: "もし今すぐ「フリーランスとして働く」と決めたとしたら、一番の心配は？", options: [{ text: "うまくいかなかったときの自分への評価", score: { A: 2 } },{ text: "周りからの目線や反応", score: { B: 2 } },{ text: "収入が安定しなくなること", score: { C: 2 } },{ text: "仕事を取れるかどうか、続けられるかどうか", score: { D: 2 } }] },
+  { text: "「自分を変えたい」と思ったとき、何が一番難しいと感じる？", options: [{ text: "完璧じゃないまま進むこと", score: { A: 2 } },{ text: "人に知られること・見られること", score: { B: 2 } },{ text: "慣れた環境から出ること", score: { C: 2 } },{ text: "変われる気がしないこと", score: { D: 2 } }] },
+];
+
+const results = {
+  A: { label: "失敗恐怖型", color: "#993C1D", bg: "#FAECE7", title: "失敗が怖くて止まってしまう「完璧主義ブロック」タイプ", desc: "あなたは「失敗=自分の価値の否定」と無意識に感じているため、完璧でないと動けない状態になっています。心理学でいう「失敗恐怖」が行動のブレーキになっているタイプです。", blockText: "完璧じゃなければ意味がない、という思い込みが、最初の一歩を重くしています。小さく試すことを「失敗」ではなく「実験」と捉え直すことが突破口になります。", point: "「小さく・早く試す」ことで、完璧主義のブロックを外していけます。" },
+  B: { label: "他者評価型", color: "#3C3489", bg: "#EEEDFE", title: "人の目が気になって動けない「承認欲求ブロック」タイプ", desc: "あなたは周りの評価や反応を非常に気にするため、「目立つこと」「変わること」への抵抗感が強いタイプです。心理学でいう「承認欲求」が行動の邪魔をしています。", blockText: "「変な人と思われたくない」という感覚が、あなたの本音を封じ込めています。自分が何をしたいかより、他人にどう見えるかを優先してしまうパターンがあります。", point: "「誰のために動くか」を意識するだけで、他者評価への依存から少しずつ抜け出せます。" },
+  C: { label: "安定執着型", color: "#0C447C", bg: "#E6F1FB", title: "安定を手放せない「現状維持ブロック」タイプ", desc: "あなたは変化によって今の安定が失われることへの恐れが強く、「準備ができてから」「もう少し後で」という先延ばしが起きやすいタイプです。これは心理学でいう「現状維持バイアス」です。", blockText: "今が不満でも、変化のリスクより現状の安心を選んでしまう。これは本能的な反応ですが、「変化しないこと」にも見えないリスクがあります。", point: "「変化のリスク」より「変化しないリスク」に目を向けることが、最初の突破口になります。" },
+  D: { label: "自己否定型", color: "#3B6D11", bg: "#EAF3DE", title: "自分を信じられない「自己効力感ブロック」タイプ", desc: "あなたは「どうせ私には無理」「自分には何もない」という自己否定の思い込みが強く、可能性を感じる前に諦めてしまうタイプです。心理学でいう「自己効力感の低さ」が原因です。", blockText: "「私には価値がない」という感覚は、過去の経験から作られた思い込みです。能力は固定ではなく、小さな成功体験を積み重ねることで必ず変化します。", point: "「できた」という小さな体験を積み重ねることが、自己効力感を育てる最短ルートです。" }
+};
+
+let current = 0, answers = [], scores = { A: 0, B: 0, C: 0, D: 0 };
+
+function startDiagnosis() {
+  document.getElementById('screen-intro').style.display = 'none';
+  document.getElementById('screen-quiz').style.display = 'block';
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = questions[current];
+  document.getElementById('step-label').textContent = '質問 ' + (current + 1) + ' / ' + questions.length;
+  document.getElementById('question-text').textContent = q.text;
+  document.getElementById('progress-fill').style.width = ((current + 1) / questions.length * 100) + '%';
+  document.getElementById('btn-back').style.display = current > 0 ? 'inline-block' : 'none';
+  document.getElementById('btn-next').disabled = answers[current] === undefined;
+  document.getElementById('btn-next').textContent = current === questions.length - 1 ? '結果を見る →' : '次へ →';
+  const list = document.getElementById('options-list');
+  list.innerHTML = '';
+  ['A','B','C','D'].forEach((l, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn' + (answers[current] === i ? ' selected' : '');
+    btn.innerHTML = '<span class="opt-letter">' + l + '</span><span class="opt-text">' + q.options[i].text + '</span>';
+    btn.onclick = () => selectOption(i);
+    list.appendChild(btn);
+  });
+}
+
+function selectOption(i) {
+  answers[current] = i;
+  document.querySelectorAll('.opt-btn').forEach((b, idx) => { b.className = 'opt-btn' + (idx === i ? ' selected' : ''); });
+  document.getElementById('btn-next').disabled = false;
+}
+
+function goNext() {
+  const chosen = answers[current];
+  Object.entries(questions[current].options[chosen].score).forEach(([k, v]) => { scores[k] += v; });
+  if (current < questions.length - 1) { current++; renderQuestion(); } else { showResult(); }
+}
+
+function goBack() {
+  if (current > 0) {
+    const prev = answers[current - 1];
+    if (prev !== undefined) {
+      Object.entries(questions[current - 1].options[prev].score).forEach(([k, v]) => { scores[k] -= v; });
+      answers[current - 1] = undefined;
+    }
+    current--; renderQuestion();
+  }
+}
+
+function showResult() {
+  document.getElementById('screen-quiz').style.display = 'none';
+  document.getElementById('screen-result').style.display = 'block';
+  const topType = Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0];
+  const r = results[topType];
+  document.getElementById('result-card').innerHTML = `
+    <div style="margin-bottom:20px;">
+      <span class="result-badge" style="background:${r.bg}; color:${r.color};">${r.label}</span>
+      <div class="result-title">${r.title}</div>
+      <div class="result-desc">${r.desc}</div>
+    </div>
+    <div class="block-box" style="border-left-color:${r.color}; background:${r.bg};">
+      <div class="block-label" style="color:${r.color};">あなたのブロックの正体</div>
+      <div class="block-text" style="color:${r.color};">${r.blockText}</div>
+    </div>
+    <div class="point-box">
+      <div class="point-label">まず意識したいこと</div>
+      <div class="point-text">${r.point}</div>
+    </div>
+    <div class="cta-box">
+      <div class="cta-title">個別相談で、あなただけの突破口を見つけませんか？</div>
+      <div class="cta-text">あなたのブロックの根本原因と、具体的な外し方を個別相談でお伝えしています。<br><br>今なら無料個別相談を受け付けています。ブロックの外し方から、在宅・フリーランスへの具体的なステップまで、一緒に整理しましょう。</div>
+      <button class="cta-btn" onclick="alert('個別相談の申し込みページへ遷移します')">無料個別相談に申し込む →</button>
+    </div>`;
+}
+</script>
+</body>
+</html>
